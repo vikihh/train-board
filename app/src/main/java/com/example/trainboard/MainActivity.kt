@@ -1,26 +1,37 @@
 package com.example.trainboard
 import android.content.Intent
 import android.os.Bundle
+import android.view.Display.Mode
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -35,7 +46,9 @@ import com.example.trainboard.ui.theme.TrainBoardTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.core.net.toUri
 
 
@@ -66,16 +79,34 @@ fun Page()
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Color.Red),
-        verticalArrangement = Arrangement.Center,
+            .background(color = Color(0xFF731522)),
+        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ){
-        Text("LNER", color = Color.White, fontSize = 25.sp, modifier = Modifier.padding(top = 0.dp))
-        Row (){
-            SimpleExposedDropdown("From", selectedStartStation, selectedEndStation)
-            SimpleExposedDropdown("To", selectedEndStation, selectedStartStation)
+        Text("LNER", color = Color.White, fontSize = 35.sp, modifier = Modifier.padding(top = 30.dp, bottom = 20.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp)
+                .height(200.dp)
+                .background(color = Color.White, shape = RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(10.dp))
+
+        )
+        {
+            Column(
+                modifier = Modifier
+                    .padding(10.dp),
+            )
+            {
+                Text("Where", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
+                SimpleExposedDropdown("From", selectedStartStation, selectedEndStation, Modifier.padding(10.dp, 10.dp, 10.dp, 5.dp))
+                SimpleExposedDropdown("To", selectedEndStation, selectedStartStation, Modifier.padding(10.dp, 5.dp, 10.dp, 10.dp))
+
+            }
 
         }
+
         ButtonToLNER(selectedStartStation, selectedEndStation)
     }
 
@@ -135,12 +166,13 @@ fun ButtonToLNER (selectedStartStation: MutableState<String>, selectedEndStation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SimpleExposedDropdown(name: String, selectedOptionText: MutableState<String>,selectedOtherOptionText: MutableState<String>) {
+fun SimpleExposedDropdown(name: String, selectedOptionText: MutableState<String>,selectedOtherOptionText: MutableState<String>, position: Modifier) {
     val options = listOf("London", "Edinburgh", "Oxford", "Liverpool", "Bristol")
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded }
+
     ) {
         TextField(
             value = selectedOptionText.value,
@@ -150,12 +182,21 @@ fun SimpleExposedDropdown(name: String, selectedOptionText: MutableState<String>
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded)
             },
-            modifier = Modifier.menuAnchor().clickable { expanded = !expanded }.padding(5.dp).width(150.dp)
+            modifier = position.menuAnchor()
+                .clickable { expanded = !expanded }
+                .fillMaxWidth()
+                .clip( shape = RoundedCornerShape(10.dp)),
+            colors = TextFieldDefaults.colors(
+                unfocusedContainerColor = Color.White,
+                focusedContainerColor = Color.White
+            )
+
         )
 
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
+
         ) {
             options.forEach { selectionOption ->
                 if (selectionOption != selectedOtherOptionText.value){
