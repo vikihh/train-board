@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -60,7 +61,8 @@ fun Page()
 
     val selectedStartStation = remember { mutableStateOf("")}
     val selectedEndStation = remember { mutableStateOf("")}
-
+    val client = ApiClient()
+    MyScreen(client)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -83,6 +85,20 @@ fun Page()
 fun generateUrl(selectedStartStation: MutableState<String>, selectedEndStation: MutableState<String>): String{
     val codeDictionary = mutableMapOf("London" to "KGX", "Edinburgh" to "EDB", "Oxford" to "OXF", "Bristol" to "BRI", "Liverpool" to "LVC")
     return "https://www.lner.co.uk/travel-information/travelling-now/live-train-times/depart/${codeDictionary[selectedStartStation.value]}/${codeDictionary[selectedEndStation.value]}/#tab_livedepartures"
+}
+
+
+@Composable
+fun MyScreen(apiClient: ApiClient) {
+    LaunchedEffect(Unit) {
+        val result = try {
+            apiClient.get("/v1/silverSeek/cheapestTickets?originCrs=KGX&destinationCrs=LDS&ticketType=return&totalDays=2&searchFirstClassOnly=false") // suspending call
+        } catch (e: Exception) {
+            "Error: ${e.message}"
+        }
+
+        println("Response: $result")
+    }
 }
 @Composable
 fun ButtonToLNER (selectedStartStation: MutableState<String>, selectedEndStation: MutableState<String>)
