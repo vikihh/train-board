@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -58,9 +59,10 @@ fun Page()
 
 
 
-    val selectedStartStation = remember { mutableStateOf("")}
-    val selectedEndStation = remember { mutableStateOf("")}
-
+    val selectedOriginStation = remember { mutableStateOf("")}
+    val selectedDestinationStation = remember { mutableStateOf("")}
+    val client = ApiClient()
+    MyScreen(client)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -70,30 +72,44 @@ fun Page()
     ){
         Text("LNER", color = Color.White, fontSize = 25.sp, modifier = Modifier.padding(top = 0.dp))
         Row (){
-            SimpleExposedDropdown("From", selectedStartStation, selectedEndStation)
-            SimpleExposedDropdown("To", selectedEndStation, selectedStartStation)
+            SimpleExposedDropdown("From", selectedOriginStation, selectedDestinationStation)
+            SimpleExposedDropdown("To", selectedDestinationStation, selectedOriginStation)
 
         }
-        ButtonToLNER(selectedStartStation, selectedEndStation)
+        ButtonToLNER(selectedOriginStation, selectedDestinationStation)
     }
 
 }
 
 
-fun generateUrl(selectedStartStation: MutableState<String>, selectedEndStation: MutableState<String>): String{
-    val codeDictionary = mutableMapOf("London" to "KGX", "Edinburgh" to "EDB", "Oxford" to "OXF", "Bristol" to "BRI", "Liverpool" to "LVC")
-    return "https://www.lner.co.uk/travel-information/travelling-now/live-train-times/depart/${codeDictionary[selectedStartStation.value]}/${codeDictionary[selectedEndStation.value]}/#tab_livedepartures"
+fun generateUrl(selectedOriginStation: MutableState<String>, selectedDestinationStation: MutableState<String>): String{
+    val stationCodes = mutableMapOf("London" to "KGX", "Edinburgh" to "EDB", "Oxford" to "OXF", "Bristol" to "BRI", "Liverpool" to "LVC")
+    return "https://www.lner.co.uk/travel-information/travelling-now/live-train-times/depart/${stationCodes[selectedOriginStation.value]}/${stationCodes[selectedDestinationStation.value]}/#tab_livedepartures"
+}
+
+
+@Composable
+fun MyScreen(apiClient: ApiClient) {
+    LaunchedEffect(Unit) {
+        val result = try {
+            apiClient.get("/v1/silverSeek/cheapestTickets?originCrs=KGX&destinationCrs=LDS&ticketType=return&totalDays=2&searchFirstClassOnly=false") 
+        } catch (e: Exception) {
+            "Error: ${e.message}"
+        }
+
+        println("Response: $result")
+    }
 }
 @Composable
-fun ButtonToLNER (selectedStartStation: MutableState<String>, selectedEndStation: MutableState<String>)
+fun ButtonToLNER (selectedOriginStation: MutableState<String>, selectedDestinationStation: MutableState<String>)
 {   val context = LocalContext.current
     val buttonText = remember { mutableStateOf("Find route") }
-    val url = generateUrl(selectedStartStation, selectedEndStation)
+    val url = generateUrl(selectedOriginStation, selectedDestinationStation)
     Button(
 
         onClick = {
 
-            if (selectedStartStation.value != "" && selectedEndStation.value != "")
+            if (selectedOriginStation.value != "" && selectedDestinationStation.value != "")
             {
                 val intent = Intent(Intent.ACTION_VIEW, url.toUri())
 
@@ -119,7 +135,7 @@ fun ButtonToLNER (selectedStartStation: MutableState<String>, selectedEndStation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SimpleExposedDropdown(name: String, selectedOptionText: MutableState<String>,selectedOtherOptionText: MutableState<String>) {
+fun SimpleExposedDropdown(name: String, selectedStation: MutableState<String>,selectedOtherStation: MutableState<String>) {
     val options = listOf("London", "Edinburgh", "Oxford", "Liverpool", "Bristol")
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
@@ -127,7 +143,7 @@ fun SimpleExposedDropdown(name: String, selectedOptionText: MutableState<String>
         onExpandedChange = { expanded = !expanded }
     ) {
         TextField(
-            value = selectedOptionText.value,
+            value = selectedStation.value,
             onValueChange = {},
             readOnly = true,
             label = { Text(name) },
@@ -142,11 +158,11 @@ fun SimpleExposedDropdown(name: String, selectedOptionText: MutableState<String>
             onDismissRequest = { expanded = false }
         ) {
             options.forEach { selectionOption ->
-                if (selectionOption != selectedOtherOptionText.value){
+                if (selectionOption != selectedOtherStation.value){
                     DropdownMenuItem(
                         text = { Text(selectionOption) },
                         onClick = {
-                            selectedOptionText.value = selectionOption
+                            selectedStation.value = selectionOption
                             expanded = false
 
                         }
