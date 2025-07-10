@@ -1,4 +1,5 @@
 package com.example.trainboard
+import android.R
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -6,6 +7,7 @@ import android.view.Display.Mode
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.collection.emptyLongSet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -67,11 +70,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+
+fun getUrl(originCode: String, destinationCode: String): String{
+    return "https://www.lner.co.uk/travel-information/travelling-now/live-train-times/depart/${originCode}/${destinationCode}/#tab_livedepartures"
+}
+fun openUrl(url: String, context: Context) {
+    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+    context.startActivity(intent)
+}
 @Composable
 fun Page()
 {
-    val selectedOriginStation = remember { mutableStateOf<Station?>(null)}
-    val selectedDestinationStation = remember { mutableStateOf<Station?>(null)}
+    var selectedOriginStation by remember { mutableStateOf<Station>(Station("", ""))}
+    var selectedDestinationStation by remember { mutableStateOf<Station>(Station("", ""))}
     val client = ApiClient()
     MyScreen(client)
     Column(
@@ -98,8 +110,8 @@ fun Page()
             )
             {
                 Text("Where", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
-                ExposedDropdown("From", selectedOriginStation, Modifier.padding(10.dp, 10.dp, 10.dp, 5.dp))
-                ExposedDropdown("To", selectedDestinationStation, Modifier.padding(10.dp, 5.dp, 10.dp, 10.dp))
+                ExposedDropdown("From", selectedOriginStation, onStationChange = { selectedOriginStation = it },  Modifier.padding(10.dp, 10.dp, 10.dp, 5.dp))
+                ExposedDropdown("To", selectedDestinationStation, onStationChange = { selectedDestinationStation = it }, Modifier.padding(10.dp, 5.dp, 10.dp, 10.dp))
 
             }
 
@@ -109,14 +121,6 @@ fun Page()
 
 }
 
-
-fun getUrl(originCode: String, destinationCode: String): String{
-    return "https://www.lner.co.uk/travel-information/travelling-now/live-train-times/depart/${originCode}/${destinationCode}/#tab_livedepartures"
-}
-fun openUrl(url: String, context: Context) {
-    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
-    context.startActivity(intent)
-}
 @Composable
 fun MyScreen(apiClient: ApiClient) {
     LaunchedEffect(Unit) {
@@ -129,24 +133,44 @@ fun MyScreen(apiClient: ApiClient) {
         println("Response: $result")
     }
 }
+@Composable
+fun ErrorAlert(message: String, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("OK")
+            }
+        },
+        title = { Text("Error:") },
+        text = { Text(message) }
+    )
+}
 
 
 @Composable
-fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: MutableState<Station>)
+fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: Station)
 {   val context = LocalContext.current
     val buttonText = remember { mutableStateOf("Find route") }
-    val url = getUrl(selectedOriginStation.value.code, selectedDestinationStation.value.code)
+
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
     Button(
 
         onClick = {
+            when {
 
-            if (selectedOriginStation.value.name != "" && selectedDestinationStation.value.name != "")
-                openUrl(url, context)
-            else
-                if (selectedOriginStation.value == selectedDestinationStation.value)
-                    buttonText.value = "Choose different staions"
-                    buttonText.value = "Stations not chosen"
 
+                (selectedOriginStation.name.isEmpty() || selectedDestinationStation.name.isEmpty()) -> {
+                    errorMessage = "Please select both origin and destination stations."
+                    showErrorDialog = true
+                }
+                (selectedOriginStation == selectedDestinationStation) -> {
+                    errorMessage = "Please Select Different Origin And Destination"
+                    showErrorDialog = true
+                }
+                else -> openUrl(getUrl(selectedOriginStation.code, selectedDestinationStation.code), context)
+            }
 
         },
         colors = ButtonDefaults.buttonColors(
@@ -157,13 +181,19 @@ fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: Mu
     {
         Text(buttonText.value)
     }
+    if (showErrorDialog) {
+        ErrorAlert(
+            message = errorMessage,
+            onDismiss = { showErrorDialog = false }
+        )
+    }
 
 
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExposedDropdown(name: String, selectedStation: MutableState<String>, position: Modifier) {
+fun ExposedDropdown(headerText: String, selectedStation: Station, onStationChange: (Station) -> (Unit), modifier: Modifier) {
 
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
@@ -172,14 +202,14 @@ fun ExposedDropdown(name: String, selectedStation: MutableState<String>, positio
 
     ) {
         TextField(
-            value = selectedStation.value,
+            value = selectedStation.name,
             onValueChange = {},
             readOnly = true,
-            label = { Text(name) },
+            label = { Text(headerText) },
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded)
             },
-            modifier = position.menuAnchor()
+            modifier = modifier.menuAnchor()
                 .clickable { expanded = !expanded }
                 .fillMaxWidth()
                 .clip( shape = RoundedCornerShape(10.dp)),
@@ -195,12 +225,11 @@ fun ExposedDropdown(name: String, selectedStation: MutableState<String>, positio
             onDismissRequest = { expanded = false }
 
         ) {
-            stations.forEach { selectionOption ->
+            stations.forEach { station ->
                     DropdownMenuItem(
-                        text = { Text(selectionOption) },
+                        text = { Text(station.name) },
                         onClick = {
-                            // onStationChange(station)
-                            selectedStation.value = selectionOption
+                            onStationChange(station)
                             expanded = false
 
                         }
@@ -209,6 +238,6 @@ fun ExposedDropdown(name: String, selectedStation: MutableState<String>, positio
             }
         }
     }
-}
+
 
 
