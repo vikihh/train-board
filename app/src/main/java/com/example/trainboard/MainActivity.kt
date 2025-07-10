@@ -1,5 +1,6 @@
 package com.example.trainboard
 import android.R
+import android.app.DatePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -11,6 +12,9 @@ import androidx.collection.emptyLongSet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,24 +22,34 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FabPosition
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -51,9 +65,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.window.Popup
 import androidx.core.net.toUri
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 
 class MainActivity : ComponentActivity() {
@@ -94,17 +115,52 @@ fun Page()
         horizontalAlignment = Alignment.CenterHorizontally
     ){
         Text("LNER", color = Color.White, fontSize = 35.sp, modifier = Modifier.padding(top = 30.dp, bottom = 20.dp))
-        StyledCardBox{
-                Text("Where", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
-                ExposedDropdown("From", selectedOriginStation, onStationChange = { selectedOriginStation = it },  Modifier.padding(10.dp, 10.dp, 10.dp, 5.dp))
-                ExposedDropdown("To", selectedDestinationStation, onStationChange = { selectedDestinationStation = it }, Modifier.padding(10.dp, 5.dp, 10.dp, 10.dp))
+        WhiteContainer {
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(
+                    "Where",
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp)
+                )
+                StationDropdown(
+                    "From",
+                    selectedOriginStation,
+                    onStationChange = { selectedOriginStation = it },
+                    Modifier.padding(10.dp, 10.dp, 10.dp, 5.dp)
+                )
+                StationDropdown(
+                    "To",
+                    selectedDestinationStation,
+                    onStationChange = { selectedDestinationStation = it },
+                    Modifier.padding(10.dp, 5.dp, 10.dp, 10.dp)
+                )
+            }
 
         }
-        StyledCardBox {
-            Text("When", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
+        WhiteContainer {
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text("When", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
+                Column(modifier = Modifier.padding(10.dp)){
+                    RoundedOutlinedBox {
+                        Text("SINGLE | RETURN | OPEN RETURN")
+                    }
+                    RoundedOutlinedBox {
+                        Text("TODAY     NOW")
+                    }
+
+                }
+            }
+
         }
-        StyledCardBox {
-            Text("Who", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
+        WhiteContainer {
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(
+                    "Who",
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp)
+                )
+
+            }
         }
 
 
@@ -112,10 +168,30 @@ fun Page()
     }
 
 }
+@Composable
+fun RoundedOutlinedBox(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+){
+    Box(contentAlignment = Alignment.Center, modifier = modifier
+        .fillMaxWidth()
+        .padding(5.dp)
+        .background(color = Color.White, shape = RoundedCornerShape(10.dp))
+        .height(30.dp)
+        .border(
+            width = 1.dp,
+            color = Color.Black,
+            shape = RoundedCornerShape(10.dp)
+        )
+        .clip(RoundedCornerShape(10.dp))
+    ) {
+        content()
+    }
 
+}
 
 @Composable
-fun StyledCardBox(
+fun WhiteContainer(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
@@ -127,9 +203,9 @@ fun StyledCardBox(
             .background(color = Color.White, shape = RoundedCornerShape(10.dp))
             .clip(RoundedCornerShape(10.dp))
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
+
             content()
-        }
+
     }
 }
 
@@ -205,7 +281,7 @@ fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: St
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExposedDropdown(headerText: String, selectedStation: Station, onStationChange: (Station) -> (Unit), modifier: Modifier) {
+fun StationDropdown(headerText: String, selectedStation: Station, onStationChange: (Station) -> (Unit), modifier: Modifier) {
 
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
@@ -250,6 +326,8 @@ fun ExposedDropdown(headerText: String, selectedStation: Station, onStationChang
             }
         }
     }
+
+
 
 
 
