@@ -94,31 +94,43 @@ fun Page()
         horizontalAlignment = Alignment.CenterHorizontally
     ){
         Text("LNER", color = Color.White, fontSize = 35.sp, modifier = Modifier.padding(top = 30.dp, bottom = 20.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp)
-                .height(200.dp)
-                .background(color = Color.White, shape = RoundedCornerShape(10.dp))
-                .clip(RoundedCornerShape(10.dp))
-
-        )
-        {
-            Column(
-                modifier = Modifier
-                    .padding(10.dp),
-            )
-            {
+        StyledCardBox{
                 Text("Where", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
                 ExposedDropdown("From", selectedOriginStation, onStationChange = { selectedOriginStation = it },  Modifier.padding(10.dp, 10.dp, 10.dp, 5.dp))
                 ExposedDropdown("To", selectedDestinationStation, onStationChange = { selectedDestinationStation = it }, Modifier.padding(10.dp, 5.dp, 10.dp, 10.dp))
 
-            }
-
         }
+        StyledCardBox {
+            Text("When", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
+        }
+        StyledCardBox {
+            Text("Who", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
+        }
+
+
         SearchButton(selectedOriginStation, selectedDestinationStation)
     }
 
+}
+
+
+@Composable
+fun StyledCardBox(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(20.dp, 10.dp,20.dp, 10.dp )
+            .height(200.dp)
+            .background(color = Color.White, shape = RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(10.dp))
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            content()
+        }
+    }
 }
 
 @Composable
