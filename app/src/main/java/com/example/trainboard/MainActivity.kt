@@ -105,6 +105,8 @@ fun Page()
 {
     var selectedOriginStation by remember { mutableStateOf<Station>(Station("", ""))}
     var selectedDestinationStation by remember { mutableStateOf<Station>(Station("", ""))}
+    var numberOfAdults by remember { mutableStateOf<Int>(1) }
+    var numberOfChildren by remember { mutableStateOf<Int>(0) }
     val client = ApiClient()
     MyScreen(client)
     Column(
@@ -137,7 +139,7 @@ fun Page()
             }
 
         }
-        WhiteContainer {
+        WhiteContainer(modifier = Modifier.height(170.dp)) {
             Column(modifier = Modifier.padding(10.dp)) {
                 Text("When", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
                 Column(modifier = Modifier.padding(10.dp)){
@@ -152,19 +154,22 @@ fun Page()
             }
 
         }
-        WhiteContainer {
+        WhiteContainer(modifier = Modifier.height(200.dp)) {
             Column(modifier = Modifier.padding(10.dp)) {
                 Text(
                     "Who",
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp)
                 )
+                PassengerDropdown("Adults (16+) :", numberOfAdults, onNumberChange = {numberOfAdults = it }, modifier = Modifier.padding(0.dp) )
+                PassengerDropdown("Children (1-15):", numberOfChildren, onNumberChange = {numberOfChildren = it }, modifier = Modifier.padding(0.dp) )
 
             }
         }
 
 
-        SearchButton(selectedOriginStation, selectedDestinationStation)
+
+        SearchButton(selectedOriginStation, selectedDestinationStation, numberOfAdults, numberOfChildren, Modifier.fillMaxWidth().padding(20.dp))
     }
 
 }
@@ -199,7 +204,7 @@ fun WhiteContainer(
         modifier = modifier
             .fillMaxWidth()
             .padding(20.dp, 10.dp,20.dp, 10.dp )
-            .height(200.dp)
+
             .background(color = Color.White, shape = RoundedCornerShape(10.dp))
             .clip(RoundedCornerShape(10.dp))
     ) {
@@ -237,7 +242,7 @@ fun ErrorAlert(message: String, onDismiss: () -> Unit) {
 
 
 @Composable
-fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: Station)
+fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: Station, numberOfAdults: Int, numberOfChildren: Int,modifier: Modifier)
 {   val context = LocalContext.current
     val buttonText = remember { mutableStateOf("Find route") }
 
@@ -264,7 +269,8 @@ fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: St
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.White,
             contentColor = Color.Black
-        )
+        ),
+        modifier = modifier
     )
     {
         Text(buttonText.value)
@@ -327,6 +333,53 @@ fun StationDropdown(headerText: String, selectedStation: Station, onStationChang
         }
     }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PassengerDropdown(headerText: String, selectedNumber: Int, onNumberChange: (Int) -> (Unit), modifier: Modifier) {
+
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+
+    ) {
+        TextField(
+            value = selectedNumber.toString(),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(headerText) },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded)
+            },
+            modifier = modifier.menuAnchor()
+                .clickable { expanded = !expanded }
+                .fillMaxWidth()
+                .clip( shape = RoundedCornerShape(10.dp)),
+            colors = TextFieldDefaults.colors(
+                unfocusedContainerColor = Color.White,
+                focusedContainerColor = Color.White
+            )
+
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+
+        ) {
+            (1..3).forEach { numberOfPassengers ->
+                DropdownMenuItem(
+                    text = { Text(numberOfPassengers.toString()) },
+                    onClick = {
+                        onNumberChange(numberOfPassengers)
+                        expanded = false
+
+                    }
+                )
+            }
+        }
+    }
+}
 
 
 
