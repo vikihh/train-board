@@ -69,9 +69,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Page()
 {
-
-
-
     val selectedStartStation = remember { mutableStateOf("")}
     val selectedEndStation = remember { mutableStateOf("")}
     val client = ApiClient()
@@ -100,8 +97,8 @@ fun Page()
             )
             {
                 Text("Where", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
-                SimpleExposedDropdown("From", selectedStartStation, selectedEndStation, Modifier.padding(10.dp, 10.dp, 10.dp, 5.dp))
-                SimpleExposedDropdown("To", selectedEndStation, selectedStartStation, Modifier.padding(10.dp, 5.dp, 10.dp, 10.dp))
+                ExposedDropdown("From", selectedStartStation, selectedEndStation, Modifier.padding(10.dp, 10.dp, 10.dp, 5.dp))
+                ExposedDropdown("To", selectedEndStation, selectedStartStation, Modifier.padding(10.dp, 5.dp, 10.dp, 10.dp))
 
             }
 
@@ -166,7 +163,7 @@ fun ButtonToLNER (selectedStartStation: MutableState<String>, selectedEndStation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SimpleExposedDropdown(name: String, selectedOptionText: MutableState<String>,selectedOtherOptionText: MutableState<String>, position: Modifier) {
+fun ExposedDropdown(name: String, selectedOptionText: MutableState<String>,selectedOtherOptionText: MutableState<String>, position: Modifier) {
     val options = listOf("London", "Edinburgh", "Oxford", "Liverpool", "Bristol")
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
