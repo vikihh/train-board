@@ -1,4 +1,5 @@
 package com.example.trainboard
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.Display.Mode
@@ -69,8 +70,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Page()
 {
-    val selectedStartStation = remember { mutableStateOf("")}
-    val selectedEndStation = remember { mutableStateOf("")}
+    val selectedOriginStation = remember { mutableStateOf<Station?>(null)}
+    val selectedDestinationStation = remember { mutableStateOf<Station?>(null)}
     val client = ApiClient()
     MyScreen(client)
     Column(
@@ -97,30 +98,30 @@ fun Page()
             )
             {
                 Text("Where", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
-                ExposedDropdown("From", selectedStartStation, selectedEndStation, Modifier.padding(10.dp, 10.dp, 10.dp, 5.dp))
-                ExposedDropdown("To", selectedEndStation, selectedStartStation, Modifier.padding(10.dp, 5.dp, 10.dp, 10.dp))
+                ExposedDropdown("From", selectedOriginStation, Modifier.padding(10.dp, 10.dp, 10.dp, 5.dp))
+                ExposedDropdown("To", selectedDestinationStation, Modifier.padding(10.dp, 5.dp, 10.dp, 10.dp))
 
             }
 
         }
-
-        ButtonToLNER(selectedStartStation, selectedEndStation)
+        SearchButton(selectedOriginStation, selectedDestinationStation)
     }
 
 }
 
 
-fun generateUrl(selectedStartStation: MutableState<String>, selectedEndStation: MutableState<String>): String{
-    val codeDictionary = mutableMapOf("London" to "KGX", "Edinburgh" to "EDB", "Oxford" to "OXF", "Bristol" to "BRI", "Liverpool" to "LVC")
-    return "https://www.lner.co.uk/travel-information/travelling-now/live-train-times/depart/${codeDictionary[selectedStartStation.value]}/${codeDictionary[selectedEndStation.value]}/#tab_livedepartures"
+fun getUrl(originCode: String, destinationCode: String): String{
+    return "https://www.lner.co.uk/travel-information/travelling-now/live-train-times/depart/${originCode}/${destinationCode}/#tab_livedepartures"
 }
-
-
+fun openUrl(url: String, context: Context) {
+    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+    context.startActivity(intent)
+}
 @Composable
 fun MyScreen(apiClient: ApiClient) {
     LaunchedEffect(Unit) {
         val result = try {
-            apiClient.get("/v1/silverSeek/cheapestTickets?originCrs=KGX&destinationCrs=LDS&ticketType=return&totalDays=2&searchFirstClassOnly=false") // suspending call
+            apiClient.get("/v1/silverSeek/cheapestTickets?originCrs=KGX&destinationCrs=LDS&ticketType=return&totalDays=2&searchFirstClassOnly=false") // suspDestinationing call
         } catch (e: Exception) {
             "Error: ${e.message}"
         }
@@ -128,25 +129,24 @@ fun MyScreen(apiClient: ApiClient) {
         println("Response: $result")
     }
 }
+
+
 @Composable
-fun ButtonToLNER (selectedStartStation: MutableState<String>, selectedEndStation: MutableState<String>)
+fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: MutableState<Station>)
 {   val context = LocalContext.current
     val buttonText = remember { mutableStateOf("Find route") }
-    val url = generateUrl(selectedStartStation, selectedEndStation)
+    val url = getUrl(selectedOriginStation.value.code, selectedDestinationStation.value.code)
     Button(
 
         onClick = {
 
-            if (selectedStartStation.value != "" && selectedEndStation.value != "")
-            {
-                val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+            if (selectedOriginStation.value.name != "" && selectedDestinationStation.value.name != "")
+                openUrl(url, context)
+            else
+                if (selectedOriginStation.value == selectedDestinationStation.value)
+                    buttonText.value = "Choose different staions"
+                    buttonText.value = "Stations not chosen"
 
-                context.startActivity(intent)
-            }
-            else {
-
-                buttonText.value = "Stations not chosen"
-            }
 
         },
         colors = ButtonDefaults.buttonColors(
@@ -163,8 +163,8 @@ fun ButtonToLNER (selectedStartStation: MutableState<String>, selectedEndStation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExposedDropdown(name: String, selectedOptionText: MutableState<String>,selectedOtherOptionText: MutableState<String>, position: Modifier) {
-    val options = listOf("London", "Edinburgh", "Oxford", "Liverpool", "Bristol")
+fun ExposedDropdown(name: String, selectedStation: MutableState<String>, position: Modifier) {
+
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -172,7 +172,7 @@ fun ExposedDropdown(name: String, selectedOptionText: MutableState<String>,selec
 
     ) {
         TextField(
-            value = selectedOptionText.value,
+            value = selectedStation.value,
             onValueChange = {},
             readOnly = true,
             label = { Text(name) },
@@ -195,12 +195,12 @@ fun ExposedDropdown(name: String, selectedOptionText: MutableState<String>,selec
             onDismissRequest = { expanded = false }
 
         ) {
-            options.forEach { selectionOption ->
-                if (selectionOption != selectedOtherOptionText.value){
+            stations.forEach { selectionOption ->
                     DropdownMenuItem(
                         text = { Text(selectionOption) },
                         onClick = {
-                            selectedOptionText.value = selectionOption
+                            // onStationChange(station)
+                            selectedStation.value = selectionOption
                             expanded = false
 
                         }
