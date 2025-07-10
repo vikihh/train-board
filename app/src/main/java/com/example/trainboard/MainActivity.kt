@@ -1,10 +1,12 @@
 package com.example.trainboard
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -54,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import com.example.trainboard.ui.theme.TrainBoardTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -63,13 +66,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.window.Popup
 import androidx.core.net.toUri
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.time.Instant
 
 
 class MainActivity : ComponentActivity() {
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -91,6 +98,18 @@ fun openUrl(url: String, context: Context) {
     val intent = Intent(Intent.ACTION_VIEW, url.toUri())
     context.startActivity(intent)
 }
+@RequiresApi(Build.VERSION_CODES.O)
+fun getTrainFaresApiUrl(originCode: String, destinationCode: String, numberOfAdults: Int, numberOfChildren: Int): String{
+    val utcTime: Instant = Instant.now()
+
+
+
+
+    return "ToDO"
+
+
+}
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun Page()
 {
@@ -98,8 +117,7 @@ fun Page()
     var selectedDestinationStation by remember { mutableStateOf<Station>(Station("", ""))}
     var numberOfAdults by remember { mutableStateOf<Int>(1) }
     var numberOfChildren by remember { mutableStateOf<Int>(0) }
-    val client = ApiClient()
-    MyScreen(client)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -205,18 +223,7 @@ fun WhiteContainer(
     }
 }
 
-@Composable
-fun MyScreen(apiClient: ApiClient) {
-    LaunchedEffect(Unit) {
-        val result = try {
-            apiClient.get("/v1/silverSeek/cheapestTickets?originCrs=KGX&destinationCrs=LDS&ticketType=return&totalDays=2&searchFirstClassOnly=false") // suspDestinationing call
-        } catch (e: Exception) {
-            "Error: ${e.message}"
-        }
 
-        println("Response: $result")
-    }
-}
 @Composable
 fun ErrorAlert(message: String, onDismiss: () -> Unit) {
     AlertDialog(
@@ -232,6 +239,7 @@ fun ErrorAlert(message: String, onDismiss: () -> Unit) {
 }
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: Station, numberOfAdults: Int, numberOfChildren: Int,modifier: Modifier)
 {   val context = LocalContext.current
@@ -239,6 +247,8 @@ fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: St
 
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
+    val client = ApiClient()
     Button(
 
         onClick = {
@@ -253,7 +263,13 @@ fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: St
                     errorMessage = "Please Select Different Origin And Destination"
                     showErrorDialog = true
                 }
-                else -> openUrl(getUrl(selectedOriginStation.code, selectedDestinationStation.code), context)
+                else -> {
+                    val apiTags = getTrainFaresApiUrl(selectedOriginStation.code, selectedDestinationStation.code, numberOfAdults, numberOfChildren)
+                    
+                    coroutineScope.launch {
+                        client.get(apiTags)
+                    }
+                }
             }
 
         },
