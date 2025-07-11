@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,10 +28,13 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -63,6 +67,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.motionEventSpy
 import androidx.compose.ui.input.pointer.pointerInput
@@ -137,7 +142,15 @@ fun getTrainFaresApiUrl(originCode: String, destinationCode: String, numberOfAdu
     val tags =  "/v1/fares?originStation=${originCode}&destinationStation=${destinationCode}&noChanges=false&avoidLondon=false&outboundDateTime=${utcTime}&outboundIsArriveBy=false&inboundIsArriveBy=false&numberOfChildren=${numberOfChildren}&numberOfAdults=${numberOfAdults}&doSplitTicketing=false&includeSpecialMenus=false"
     return tags
 }
-
+@RequiresApi(Build.VERSION_CODES.O)
+fun getDurationMin (utcTimeDepart: String, utcTimeArrive: String):String
+{
+    val timeDepart = getTimefromUTC(utcTimeDepart)
+    val timeArrive = getTimefromUTC(utcTimeArrive)
+    var minutesDepart = (timeDepart[0]-'0')*600 + (timeDepart[1]-'0')*60 + (timeDepart[3]-'0')*10 + (timeDepart[4]-'0')
+    var minutesArrive = (timeArrive[0]-'0')*600 + (timeArrive[1]-'0')*60 + (timeArrive[3]-'0')*10 + (timeArrive[4]-'0')
+    return (minutesArrive - minutesDepart).toString()
+}
 //fun getTrainInfoFromJSON()
 
 
@@ -244,7 +257,7 @@ fun TicketResultsPage(viewModel: TrainInfoViewModel){
 
                     )
                 {
-                        Text("${viewModel.trainInfo?.outboundJourneys!![0].originStation.displayName} -> ${viewModel.trainInfo?.outboundJourneys!![0].destinationStation.displayName}",
+                        Text("${viewModel.trainInfo?.outboundJourneys!![0].originStation.displayName} → ${viewModel.trainInfo?.outboundJourneys!![0].destinationStation.displayName}",
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp)
 
@@ -269,9 +282,13 @@ fun TicketResultsPage(viewModel: TrainInfoViewModel){
                         )
                 {
                    // Text("${getDatefromUTC(journey.departureTime)} - ${getDatefromUTC( journey.arrivalTime)}")
-                    Text("${getTimefromUTC(journey.departureTime)} -> ${getTimefromUTC( journey.arrivalTime)}",
+                    Row{
+                        Text("${getTimefromUTC(journey.departureTime)} → ${getTimefromUTC( journey.arrivalTime)} " ,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp)
+                        Text("           ${getDurationMin(journey.departureTime, journey.arrivalTime)}min")
+                    }
+                   // Text("Duration: ${getDurationMin(journey.departureTime, journey.arrivalTime)}min")
                     val totalPrice = journey.tickets.minOf{it.priceInPennies}/100
                     Text("£${totalPrice}")
                 }
@@ -315,14 +332,21 @@ fun WhiteContainer(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    Box(
+
+    ElevatedCard(
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 26.dp
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
         modifier = modifier
             .fillMaxWidth()
             .padding(20.dp, 10.dp,20.dp, 10.dp )
+            .background(color = Color.White, shape = RoundedCornerShape(16.dp))
+    )
 
-            .background(color = Color.White, shape = RoundedCornerShape(10.dp))
-            .clip(RoundedCornerShape(10.dp))
-    ) {
+    {
 
             content()
 
