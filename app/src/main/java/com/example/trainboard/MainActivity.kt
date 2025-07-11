@@ -1,4 +1,5 @@
 package com.example.trainboard
+import android.R
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -68,6 +69,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.window.Popup
 import androidx.core.net.toUri
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -120,16 +122,16 @@ fun getTrainFaresApiUrl(originCode: String, destinationCode: String, numberOfAdu
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
-    println("hi ")
+    val trainInfoViewModel: TrainInfoViewModel = viewModel()
     NavHost(navController = navController, startDestination = "findTicketPage") {
-        composable("findTicketPage") { FindTicketPage(navController) }
-        composable("ticketResultsPage") { TicketResultsPage() }
+        composable("findTicketPage") { FindTicketPage(navController, trainInfoViewModel) }
+        composable("ticketResultsPage") { TicketResultsPage(trainInfoViewModel) }
     }
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun FindTicketPage(navController: NavController)
+fun FindTicketPage(navController: NavController, viewModel: TrainInfoViewModel)
 {
     var selectedOriginStation by remember { mutableStateOf<Station>(Station("", ""))}
     var selectedDestinationStation by remember { mutableStateOf<Station>(Station("", ""))}
@@ -196,14 +198,17 @@ fun FindTicketPage(navController: NavController)
 
 
 
-        SearchButton(navController, selectedOriginStation, selectedDestinationStation,numberOfAdults, numberOfChildren, Modifier.fillMaxWidth().padding(20.dp))
+        SearchButton(navController, selectedOriginStation, selectedDestinationStation,numberOfAdults, numberOfChildren, Modifier.fillMaxWidth().padding(20.dp), viewModel)
     }
 
 }
 
 @Composable
-fun TicketResultsPage(){
+fun TicketResultsPage(viewModel: TrainInfoViewModel){
     Box(Modifier.background(Color.Black).fillMaxSize())
+    if (viewModel.trainInfo != null)
+        Text(viewModel.trainInfo!!.numberOfChildren.toString(), color = Color.Red)
+
 
 }
 @Composable
@@ -265,7 +270,7 @@ fun ErrorAlert(message: String, onDismiss: () -> Unit) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun SearchButton (navController: NavController, selectedOriginStation: Station, selectedDestinationStation: Station, numberOfAdults: Int, numberOfChildren: Int,modifier: Modifier)
+fun SearchButton (navController: NavController, selectedOriginStation: Station, selectedDestinationStation: Station, numberOfAdults: Int, numberOfChildren: Int,modifier: Modifier, viewModel: TrainInfoViewModel)
 {   val context = LocalContext.current
     val buttonText = "Find route"
     var trainInfo by remember { mutableStateOf<TrainInfo?>(null) }
@@ -321,7 +326,10 @@ fun SearchButton (navController: NavController, selectedOriginStation: Station, 
     {
         Text(buttonText)
     }
-    if (!showLoading && !showErrorDialog && trainInfo != null) navController.navigate("ticketResultsPage/$trainInfo")
+    if (!showLoading && !showErrorDialog && trainInfo != null){
+        navController.navigate("ticketResultsPage")
+        viewModel.trainInfo = trainInfo
+    }
     if (showLoading) LoadingIndicator(showLoading)
     if (showErrorDialog) {
         ErrorAlert(

@@ -1,4 +1,8 @@
 package com.example.trainboard
 
-class TrainInfoViewModel {
+import androidx.lifecycle.ViewModel
+import androidx.compose.runtime.*
+
+class TrainInfoViewModel : ViewModel() {
+    var trainInfo by mutableStateOf<TrainInfo?>(null)
 }
