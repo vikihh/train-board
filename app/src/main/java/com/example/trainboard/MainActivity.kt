@@ -64,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.motionEventSpy
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -81,6 +82,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.time.Instant
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 
 class MainActivity : ComponentActivity() {
@@ -106,6 +109,26 @@ fun getUrl(originCode: String, destinationCode: String): String{
 fun openUrl(url: String, context: Context) {
     val intent = Intent(Intent.ACTION_VIEW, url.toUri())
     context.startActivity(intent)
+}
+@RequiresApi(Build.VERSION_CODES.O)
+fun getDatefromUTC (utcTime: String):String
+{
+    val dateFormatter = DateTimeFormatter.ofPattern("EEEE, dd MMM") // e.g. "Friday, 11 Jul 2025"
+               // e.g. "09:30"
+    val time = ZonedDateTime.parse(utcTime)
+    val niceDate = time.format(dateFormatter)
+
+    return niceDate
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun getTimefromUTC (utcTime: String):String
+{
+    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    val time = ZonedDateTime.parse(utcTime)
+    val niceTime = time.format(timeFormatter)
+
+    return niceTime
 }
 @RequiresApi(Build.VERSION_CODES.O)
 fun getTrainFaresApiUrl(originCode: String, destinationCode: String, numberOfAdults: Int, numberOfChildren: Int): String{
@@ -203,9 +226,63 @@ fun FindTicketPage(navController: NavController, viewModel: TrainInfoViewModel)
 
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun TicketResultsPage(viewModel: TrainInfoViewModel){
-    Box(Modifier.background(Color.Black).fillMaxSize())
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(color = Color(0xFF731522)),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ){
+        Text("LNER", color = Color.White, fontSize = 35.sp, modifier = Modifier.padding(top = 30.dp, bottom = 20.dp))
+        WhiteContainer(modifier = Modifier.height(130.dp)){
+                Column(
+                    modifier = Modifier.padding(15.dp).fillMaxWidth(),
+
+
+                    )
+                {
+                        Text("${viewModel.trainInfo?.outboundJourneys!![0].originStation.displayName} -> ${viewModel.trainInfo?.outboundJourneys!![0].destinationStation.displayName}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp)
+
+
+                        Text("${getDatefromUTC(viewModel.trainInfo?.outboundJourneys!![0].departureTime)}                       Adults: ${viewModel.trainInfo?.numberOfAdults}, Children: ${viewModel.trainInfo?.numberOfChildren}",
+
+                            fontSize = 15.sp)
+
+                }
+        }
+
+        for (journey in viewModel.trainInfo?.outboundJourneys!!)
+        {
+            WhiteContainer (
+                modifier = Modifier.height(100.dp)
+
+            ){
+                Column (
+                    modifier = Modifier.padding(15.dp).fillMaxWidth(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                        )
+                {
+                   // Text("${getDatefromUTC(journey.departureTime)} - ${getDatefromUTC( journey.arrivalTime)}")
+                    Text("${getTimefromUTC(journey.departureTime)} -> ${getTimefromUTC( journey.arrivalTime)}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp)
+                    val totalPrice = journey.tickets.minOf{it.priceInPennies}/100
+                    Text("£${totalPrice}")
+                }
+            }
+
+
+
+
+        }
+
+    }
     if (viewModel.trainInfo != null)
         Text(viewModel.trainInfo!!.numberOfChildren.toString(), color = Color.Red)
 
