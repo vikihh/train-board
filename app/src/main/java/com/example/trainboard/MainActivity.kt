@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -107,8 +108,12 @@ fun openUrl(url: String, context: Context) {
 @RequiresApi(Build.VERSION_CODES.O)
 fun getTrainFaresApiUrl(originCode: String, destinationCode: String, numberOfAdults: Int, numberOfChildren: Int): String{
     val utcTime: Instant = Instant.now()
-    return "/v1/fares?originStation=${originCode}&destinationStation=${destinationCode}&noChanges=false&avoidLondon=false&outboundDateTime=${utcTime}&outboundIsArriveBy=false&inboundIsArriveBy=false&numberOfChildren=${numberOfChildren}&numberOfAdults=${numberOfAdults}&doSplitTicketing=false&includeSpecialMenus=false"
+
+    val tags =  "/v1/fares?originStation=${originCode}&destinationStation=${destinationCode}&noChanges=false&avoidLondon=false&outboundDateTime=${utcTime}&outboundIsArriveBy=false&inboundIsArriveBy=false&numberOfChildren=${numberOfChildren}&numberOfAdults=${numberOfAdults}&doSplitTicketing=false&includeSpecialMenus=false"
+    return tags
 }
+
+//fun getTrainInfoFromJSON()
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -199,6 +204,7 @@ fun FindTicketPage(navController: NavController)
 @Composable
 fun TicketResultsPage(){
     Box(Modifier.background(Color.Black).fillMaxSize())
+
 }
 @Composable
 fun RoundedOutlinedBox(
@@ -261,10 +267,11 @@ fun ErrorAlert(message: String, onDismiss: () -> Unit) {
 @Composable
 fun SearchButton (navController: NavController, selectedOriginStation: Station, selectedDestinationStation: Station, numberOfAdults: Int, numberOfChildren: Int,modifier: Modifier)
 {   val context = LocalContext.current
-    val buttonText = remember { mutableStateOf("Find route") }
-
+    val buttonText = "Find route"
+    var trainInfo by remember { mutableStateOf<TrainInfo?>(null) }
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+    var showLoading by remember { mutableStateOf(false)}
     val coroutineScope = rememberCoroutineScope()
     val client = ApiClient()
     Button(
@@ -283,12 +290,24 @@ fun SearchButton (navController: NavController, selectedOriginStation: Station, 
                 }
                 else -> {
                     val apiTags = getTrainFaresApiUrl(selectedOriginStation.code, selectedDestinationStation.code, numberOfAdults, numberOfChildren)
-                    navController.navigate("ticketResultsPage")
+                    showLoading = true
                     coroutineScope.launch {
+                        var json = ""
+                        try {
+                            json = client.get(apiTags)
+                        }catch(e: Exception){
+                            errorMessage = "failed to fetch from API, please try again!"
+                            showErrorDialog = true
+                            showLoading = false
 
-                        val arav = client.get(apiTags)
-                        println(arav)
+                        }
+                        val jsonParser = Json{ ignoreUnknownKeys = true}
+                        trainInfo = jsonParser.decodeFromString<TrainInfo>(json)
+                        showLoading = false
+
                     }
+
+
                 }
             }
 
@@ -300,8 +319,10 @@ fun SearchButton (navController: NavController, selectedOriginStation: Station, 
         modifier = modifier
     )
     {
-        Text(buttonText.value)
+        Text(buttonText)
     }
+    if (!showLoading && !showErrorDialog && trainInfo != null) navController.navigate("ticketResultsPage/$trainInfo")
+    if (showLoading) LoadingIndicator(showLoading)
     if (showErrorDialog) {
         ErrorAlert(
             message = errorMessage,
@@ -311,7 +332,16 @@ fun SearchButton (navController: NavController, selectedOriginStation: Station, 
 
 
 }
+@Composable
+fun LoadingIndicator(loading: Boolean) {
+    if (!loading) return
 
+    CircularProgressIndicator(
+        modifier = Modifier.width(64.dp),
+        color = MaterialTheme.colorScheme.secondary,
+        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+    )
+}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StationDropdown(headerText: String, selectedStation: Station, onStationChange: (Station) -> (Unit), modifier: Modifier) {
