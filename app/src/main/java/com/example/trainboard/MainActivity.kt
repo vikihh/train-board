@@ -3,6 +3,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.service.controls.Control
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -66,8 +67,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.window.Popup
 import androidx.core.net.toUri
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -83,7 +89,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             TrainBoardTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Page()
+                    MainScreen()
                 }
             }
         }
@@ -101,17 +107,24 @@ fun openUrl(url: String, context: Context) {
 @RequiresApi(Build.VERSION_CODES.O)
 fun getTrainFaresApiUrl(originCode: String, destinationCode: String, numberOfAdults: Int, numberOfChildren: Int): String{
     val utcTime: Instant = Instant.now()
-
-
-
-
-    return "ToDO"
-
-
+    return "/v1/fares?originStation=${originCode}&destinationStation=${destinationCode}&noChanges=false&avoidLondon=false&outboundDateTime=${utcTime}&outboundIsArriveBy=false&inboundIsArriveBy=false&numberOfChildren=${numberOfChildren}&numberOfAdults=${numberOfAdults}&doSplitTicketing=false&includeSpecialMenus=false"
 }
+
+
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun Page()
+fun MainScreen() {
+    val navController = rememberNavController()
+    println("hi ")
+    NavHost(navController = navController, startDestination = "findTicketPage") {
+        composable("findTicketPage") { FindTicketPage(navController) }
+        composable("ticketResultsPage") { TicketResultsPage() }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun FindTicketPage(navController: NavController)
 {
     var selectedOriginStation by remember { mutableStateOf<Station>(Station("", ""))}
     var selectedDestinationStation by remember { mutableStateOf<Station>(Station("", ""))}
@@ -178,9 +191,14 @@ fun Page()
 
 
 
-        SearchButton(selectedOriginStation, selectedDestinationStation, numberOfAdults, numberOfChildren, Modifier.fillMaxWidth().padding(20.dp))
+        SearchButton(navController, selectedOriginStation, selectedDestinationStation,numberOfAdults, numberOfChildren, Modifier.fillMaxWidth().padding(20.dp))
     }
 
+}
+
+@Composable
+fun TicketResultsPage(){
+    Box(Modifier.background(Color.Black).fillMaxSize())
 }
 @Composable
 fun RoundedOutlinedBox(
@@ -241,7 +259,7 @@ fun ErrorAlert(message: String, onDismiss: () -> Unit) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: Station, numberOfAdults: Int, numberOfChildren: Int,modifier: Modifier)
+fun SearchButton (navController: NavController, selectedOriginStation: Station, selectedDestinationStation: Station, numberOfAdults: Int, numberOfChildren: Int,modifier: Modifier)
 {   val context = LocalContext.current
     val buttonText = remember { mutableStateOf("Find route") }
 
@@ -265,9 +283,11 @@ fun SearchButton (selectedOriginStation: Station, selectedDestinationStation: St
                 }
                 else -> {
                     val apiTags = getTrainFaresApiUrl(selectedOriginStation.code, selectedDestinationStation.code, numberOfAdults, numberOfChildren)
-                    
+                    navController.navigate("ticketResultsPage")
                     coroutineScope.launch {
-                        client.get(apiTags)
+
+                        val arav = client.get(apiTags)
+                        println(arav)
                     }
                 }
             }

@@ -25,8 +25,6 @@ class ApiClient {
         }
         defaultRequest {
             header("X-API-KEY", BuildConfig.API_KEY)
-            println("API Key: '${BuildConfig.API_KEY}' (length=${BuildConfig.API_KEY.length})")
-
             url{
                 protocol = URLProtocol.HTTPS
                 host = "int-test1.tram.softwire-lner-dev.co.uk"
