@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,7 +47,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -61,6 +65,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -75,6 +80,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import io.ktor.util.date.toDate
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -82,8 +88,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Calendar
 
 
 class MainActivity : ComponentActivity() {
@@ -131,10 +139,10 @@ fun getTimefromUTC (utcTime: String):String
     return niceTime
 }
 @RequiresApi(Build.VERSION_CODES.O)
-fun getTrainFaresApiUrl(originCode: String, destinationCode: String, numberOfAdults: Int, numberOfChildren: Int): String{
-    val utcTime: Instant = Instant.now()
+fun getTrainFaresApiUrl(originCode: String, destinationCode: String, numberOfAdults: Int, numberOfChildren: Int, currentTime: Instant): String{
 
-    val tags =  "/v1/fares?originStation=${originCode}&destinationStation=${destinationCode}&noChanges=false&avoidLondon=false&outboundDateTime=${utcTime}&outboundIsArriveBy=false&inboundIsArriveBy=false&numberOfChildren=${numberOfChildren}&numberOfAdults=${numberOfAdults}&doSplitTicketing=false&includeSpecialMenus=false"
+
+    val tags =  "/v1/fares?originStation=${originCode}&destinationStation=${destinationCode}&noChanges=false&avoidLondon=false&outboundDateTime=${currentTime}&outboundIsArriveBy=false&inboundIsArriveBy=false&numberOfChildren=${numberOfChildren}&numberOfAdults=${numberOfAdults}&doSplitTicketing=false&includeSpecialMenus=false"
     return tags
 }
 
@@ -152,6 +160,7 @@ fun MainScreen() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun FindTicketPage(navController: NavController, viewModel: TrainInfoViewModel)
@@ -160,6 +169,8 @@ fun FindTicketPage(navController: NavController, viewModel: TrainInfoViewModel)
     var selectedDestinationStation by remember { mutableStateOf<Station>(Station("", ""))}
     var numberOfAdults by remember { mutableStateOf<Int>(1) }
     var numberOfChildren by remember { mutableStateOf<Int>(0) }
+    var currentTime by remember { mutableStateOf(Instant.now()) }
+    var showTimePicker by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -169,6 +180,7 @@ fun FindTicketPage(navController: NavController, viewModel: TrainInfoViewModel)
         horizontalAlignment = Alignment.CenterHorizontally
     ){
         Text("LNER", color = Color.White, fontSize = 35.sp, modifier = Modifier.padding(top = 30.dp, bottom = 20.dp))
+
         WhiteContainer {
             Column(modifier = Modifier.padding(10.dp)) {
                 Text(
@@ -191,21 +203,42 @@ fun FindTicketPage(navController: NavController, viewModel: TrainInfoViewModel)
             }
 
         }
+        if (showTimePicker) {
+            BasicAlertDialog(
+                { showTimePicker = false },
+
+                content =  {
+                    Column(verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally) {
+                        DialAlert(currentTime = currentTime, onTimeChange = {currentTime = it}, onConfirm = { showTimePicker = false })
+
+                    }
+                }
+
+            )
+
+        }
         WhiteContainer(modifier = Modifier.height(170.dp)) {
             Column(modifier = Modifier.padding(10.dp)) {
                 Text("When", fontWeight = FontWeight.Bold, modifier =  Modifier.padding(7.dp, 4.dp, 0.dp, 0.dp))
                 Column(modifier = Modifier.padding(10.dp)){
                     RoundedOutlinedBox {
-                        Text("SINGLE | RETURN | OPEN RETURN")
+                        Text("${currentTime.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy - HH:mm"))}")
                     }
-                    RoundedOutlinedBox {
-                        Text("TODAY     NOW")
-                    }
+
+
+                        Button(onClick = {showTimePicker = true}, modifier = Modifier.fillMaxWidth().height(35.dp) , border = BorderStroke(1.dp, Color.Black),colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.LightGray,
+                            contentColor = Color.Black
+                        )) {Text("CLICK TO CHOOSE TIME") }
+
+
 
                 }
             }
 
         }
+
         WhiteContainer(modifier = Modifier.height(200.dp)) {
             Column(modifier = Modifier.padding(10.dp)) {
                 Text(
@@ -221,7 +254,7 @@ fun FindTicketPage(navController: NavController, viewModel: TrainInfoViewModel)
 
 
 
-        SearchButton(navController, selectedOriginStation, selectedDestinationStation,numberOfAdults, numberOfChildren, Modifier.fillMaxWidth().padding(20.dp), viewModel)
+        SearchButton(navController, selectedOriginStation, selectedDestinationStation,numberOfAdults, numberOfChildren, Modifier.fillMaxWidth().padding(20.dp), currentTime, viewModel)
     }
 
 }
@@ -301,9 +334,9 @@ fun RoundedOutlinedBox(
         .border(
             width = 1.dp,
             color = Color.Black,
-            shape = RoundedCornerShape(10.dp)
+            shape = RoundedCornerShape(15.dp)
         )
-        .clip(RoundedCornerShape(10.dp))
+        .clip(RoundedCornerShape(15.dp))
     ) {
         content()
     }
@@ -346,8 +379,45 @@ fun ErrorAlert(message: String, onDismiss: () -> Unit) {
 
 
 @RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchButton (navController: NavController, selectedOriginStation: Station, selectedDestinationStation: Station, numberOfAdults: Int, numberOfChildren: Int,modifier: Modifier, viewModel: TrainInfoViewModel)
+fun DialAlert(
+    currentTime: Instant,
+    onTimeChange: (Instant) -> Unit,
+    onConfirm: () -> Unit
+) {
+    val zonedTime = remember(currentTime) {
+        ZonedDateTime.ofInstant(currentTime, ZoneId.systemDefault())
+    }
+
+    val timePickerState = rememberTimePickerState(
+        initialHour = zonedTime.hour,
+        initialMinute = zonedTime.minute,
+        is24Hour = true
+    )
+
+    Column {
+        TimePicker(state = timePickerState)
+
+        Button(
+            onClick = {
+                val updated = zonedTime
+                    .withHour(timePickerState.hour)
+                    .withMinute(timePickerState.minute)
+                onTimeChange(updated.toInstant())
+                onConfirm()
+            }
+        ) {
+            Text("Click to Confirm")
+        }
+    }
+}
+
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun SearchButton (navController: NavController, selectedOriginStation: Station, selectedDestinationStation: Station, numberOfAdults: Int, numberOfChildren: Int, modifier: Modifier, currentTime: Instant, viewModel: TrainInfoViewModel)
 {   val context = LocalContext.current
     val buttonText = "Find route"
     var trainInfo by remember { mutableStateOf<TrainInfo?>(null) }
@@ -371,7 +441,7 @@ fun SearchButton (navController: NavController, selectedOriginStation: Station, 
                     showErrorDialog = true
                 }
                 else -> {
-                    val apiTags = getTrainFaresApiUrl(selectedOriginStation.code, selectedDestinationStation.code, numberOfAdults, numberOfChildren)
+                    val apiTags = getTrainFaresApiUrl(selectedOriginStation.code, selectedDestinationStation.code, numberOfAdults, numberOfChildren, currentTime)
                     showLoading = true
                     coroutineScope.launch {
                         var json = ""
