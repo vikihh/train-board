@@ -140,7 +140,7 @@ fun getTimefromUTC (utcTime: String):String
 }
 @RequiresApi(Build.VERSION_CODES.O)
 fun getTrainFaresApiUrl(originCode: String, destinationCode: String, numberOfAdults: Int, numberOfChildren: Int, currentTime: Instant): String{
-
+    val utcTime: Instant = Instant.now()
 
     val tags =  "/v1/fares?originStation=${originCode}&destinationStation=${destinationCode}&noChanges=false&avoidLondon=false&outboundDateTime=${currentTime}&outboundIsArriveBy=false&inboundIsArriveBy=false&numberOfChildren=${numberOfChildren}&numberOfAdults=${numberOfAdults}&doSplitTicketing=false&includeSpecialMenus=false"
     return tags
