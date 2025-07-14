@@ -24,8 +24,8 @@ data class OutboundJourney(
     val departureTime: String,
     val arrivalTime: String,
     val status: String,
-    val tickets: List<Ticket>
-    // etc.
+    val tickets: List<Ticket>,
+    val journeyDurationInMinutes: Int
 )
 @OptIn(kotlinx.serialization.InternalSerializationApi::class)
 
